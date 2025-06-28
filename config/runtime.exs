@@ -115,3 +115,16 @@ if config_env() == :prod do
   #
   # See https://hexdocs.pm/swoosh/Swoosh.html#module-installation for details.
 end
+
+discord_id = System.get_env("DISCORD_CLIENT_ID") || raise "Required DISCORD_CLIENT_ID in env."
+
+discord_secret =
+  System.get_env("DISCORD_CLIENT_SECRET") || raise "Required DISCORD_CLIENT_ID in env."
+
+
+config :assent,
+  discord: [
+    client_id: discord_id,
+    client_secret: discord_secret,
+    redirect_uri: "/auth/discord/callback"
+  ]
