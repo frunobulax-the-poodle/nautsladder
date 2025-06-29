@@ -1,6 +1,8 @@
 defmodule NautsladderWeb.Router do
   use NautsladderWeb, :router
 
+  import NautsladderWeb.UserAuth
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -8,6 +10,7 @@ defmodule NautsladderWeb.Router do
     plug :put_root_layout, html: {NautsladderWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :fetch_current_user
   end
 
   pipeline :api do
@@ -40,5 +43,36 @@ defmodule NautsladderWeb.Router do
       live_dashboard "/dashboard", metrics: NautsladderWeb.Telemetry
       forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
+  end
+
+  ## Authentication routes
+
+  scope "/oauth/discord", NautsladderWeb do
+    pipe_through [:browser, :redirect_if_user_is_authenticated]
+
+    get "/", UserSessionController, :request
+    get "/callback", UserSessionController, :callback
+  end
+
+  scope "/", NautsladderWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
+    live_session :require_authenticated_user,
+      on_mount: [{NautsladderWeb.UserAuth, :ensure_authenticated}] do
+      live "/user/settings", UserSettingsLive, :edit
+    end
+  end
+
+  scope "/", NautsladderWeb do
+    pipe_through [:browser]
+
+    delete "/user/log_out", UserSessionController, :delete
+
+    # TODO do we need this
+    # live_session :current_user,
+    #   on_mount: [{NautsladderWeb.UserAuth, :current_user}] do
+    #   live "/user/confirm/:token", UserConfirmationLive, :edit
+    #   live "/user/confirm", UserConfirmationInstructionsLive, :new
+    # end
   end
 end
