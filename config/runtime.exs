@@ -121,10 +121,8 @@ discord_id = System.get_env("DISCORD_CLIENT_ID") || raise "Required DISCORD_CLIE
 discord_secret =
   System.get_env("DISCORD_CLIENT_SECRET") || raise "Required DISCORD_CLIENT_ID in env."
 
-
 config :assent,
   discord: [
     client_id: discord_id,
-    client_secret: discord_secret,
-    redirect_uri: "/auth/discord/callback"
+    client_secret: discord_secret
   ]
