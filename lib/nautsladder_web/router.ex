@@ -55,24 +55,8 @@ defmodule NautsladderWeb.Router do
   end
 
   scope "/", NautsladderWeb do
-    pipe_through [:browser, :require_authenticated_user]
-
-    live_session :require_authenticated_user,
-      on_mount: [{NautsladderWeb.UserAuth, :ensure_authenticated}] do
-      live "/user/settings", UserSettingsLive, :edit
-    end
-  end
-
-  scope "/", NautsladderWeb do
     pipe_through [:browser]
 
     delete "/user/log_out", UserSessionController, :delete
-
-    # TODO do we need this
-    # live_session :current_user,
-    #   on_mount: [{NautsladderWeb.UserAuth, :current_user}] do
-    #   live "/user/confirm/:token", UserConfirmationLive, :edit
-    #   live "/user/confirm", UserConfirmationInstructionsLive, :new
-    # end
   end
 end

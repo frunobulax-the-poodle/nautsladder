@@ -17,13 +17,14 @@ config :nautsladder, Nautsladder.Repo,
 # watchers to your application. For example, we can use it
 # to bundle .js and .css sources.
 config :nautsladder, NautsladderWeb.Endpoint,
-  # Binding to loopback ipv4 address prevents access from other machines.
-  # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
-  http: [ip: {127, 0, 0, 1}, port: 4000],
+  # Bind to 0.0.0.0 to expose the server to the docker host machine.
+  # This makes make the service accessible from any network interface.
+  # Change to `ip: {127, 0, 0, 1}` to allow access only from the server machine.
+  http: [ip: {127, 0, 0, 1}, port: String.to_integer(System.get_env("PORT") || "4000")],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
-  secret_key_base: "LqzlaMe43bfB3wfzfJV5/dKKjQp4VyyAIljrOLVXOzv5Zlcg7XdT/kiu+nTz4JzC",
+  secret_key_base: "jXfg8JnnaY5uBMfupGZfyzYZKmenvFNYUvkCmgD5e11mh1h5lOCsAUCdb+kimMYC",
   watchers: [
     esbuild: {Esbuild, :install_and_run, [:nautsladder, ~w(--sourcemap=inline --watch)]},
     tailwind: {Tailwind, :install_and_run, [:nautsladder, ~w(--watch)]}
@@ -55,10 +56,11 @@ config :nautsladder, NautsladderWeb.Endpoint,
 # Watch static and templates for browser reloading.
 config :nautsladder, NautsladderWeb.Endpoint,
   live_reload: [
+    web_console_logger: true,
     patterns: [
       ~r"priv/static/(?!uploads/).*(js|css|png|jpeg|jpg|gif|svg)$",
       ~r"priv/gettext/.*(po)$",
-      ~r"lib/nautsladder_web/(controllers|live|components)/.*(ex|heex)$"
+      ~r"lib/nautsladder_web/(?:controllers|live|components|router)/?.*\.(ex|heex)$"
     ]
   ]
 
@@ -66,7 +68,7 @@ config :nautsladder, NautsladderWeb.Endpoint,
 config :nautsladder, dev_routes: true
 
 # Do not include metadata nor timestamps in development logs
-config :logger, :console, format: "[$level] $message\n"
+config :logger, :default_formatter, format: "[$level] $message\n"
 
 # Set a higher stacktrace during development. Avoid configuring such
 # in production as building large stacktraces may be expensive.
@@ -76,7 +78,8 @@ config :phoenix, :stacktrace_depth, 20
 config :phoenix, :plug_init_mode, :runtime
 
 config :phoenix_live_view,
-  # Include HEEx debug annotations as HTML comments in rendered markup
+  # Include HEEx debug annotations as HTML comments in rendered markup.
+  # Changing this configuration will require mix clean and a full recompile.
   debug_heex_annotations: true,
   # Enable helpful, but potentially expensive runtime checks
   enable_expensive_runtime_checks: true

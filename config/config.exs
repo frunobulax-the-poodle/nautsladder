@@ -36,25 +36,24 @@ config :esbuild,
   version: "0.17.11",
   nautsladder: [
     args:
-      ~w(js/app.js --bundle --target=es2017 --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
+      ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/*),
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ]
 
 # Configure tailwind (the version is required)
 config :tailwind,
-  version: "3.4.3",
+  version: "4.0.9",
   nautsladder: [
     args: ~w(
-      --config=tailwind.config.js
-      --input=css/app.css
-      --output=../priv/static/assets/app.css
+      --input=assets/css/app.css
+      --output=priv/static/assets/css/app.css
     ),
-    cd: Path.expand("../assets", __DIR__)
+    cd: Path.expand("..", __DIR__)
   ]
 
 # Configures Elixir's Logger
-config :logger, :console,
+config :logger, :default_formatter,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
 
@@ -66,7 +65,6 @@ config :phoenix, :json_library, Jason
 import_config "#{config_env()}.exs"
 
 config :assent,
-  http_adapter: {Assent.HTTPAdapter.Finch, supervisor: Nautsladder.Finch},
   discord: [
     # Omit email scope, we don't need it.
     authorization_params: [scope: "identify"]

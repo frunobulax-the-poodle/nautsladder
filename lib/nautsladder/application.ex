@@ -12,8 +12,6 @@ defmodule Nautsladder.Application do
       Nautsladder.Repo,
       {DNSCluster, query: Application.get_env(:nautsladder, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Nautsladder.PubSub},
-      # Start the Finch HTTP client for sending emails
-      {Finch, name: Nautsladder.Finch},
       # Start a worker by calling: Nautsladder.Worker.start_link(arg)
       # {Nautsladder.Worker, arg},
       # Start to serve requests, typically the last entry
