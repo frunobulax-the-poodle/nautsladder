@@ -9,33 +9,22 @@ defmodule Nautsladder.AccountsFixtures do
   alias Nautsladder.Accounts
   alias Nautsladder.Accounts.Scope
 
-  def unique_user_email, do: "user#{System.unique_integer()}@example.com"
-  def valid_user_password, do: "hello world!"
+  def unique_discord_id, do: System.unique_integer([:positive])
 
   def valid_user_attributes(attrs \\ %{}) do
+    id = unique_discord_id()
+
     Enum.into(attrs, %{
-      email: unique_user_email()
+      discord_id: id,
+      username: Integer.to_string(id)
     })
   end
 
-  def unconfirmed_user_fixture(attrs \\ %{}) do
+  def user_fixture(attrs \\ %{}) do
     {:ok, user} =
       attrs
       |> valid_user_attributes()
-      |> Accounts.register_user()
-
-    user
-  end
-
-  def user_fixture(attrs \\ %{}) do
-    user = unconfirmed_user_fixture(attrs)
-
-    token =
-      extract_user_token(fn url ->
-        Accounts.deliver_login_instructions(user, url)
-      end)
-
-    {:ok, user, _expired_tokens} = Accounts.login_user_by_magic_link(token)
+      |> Accounts.register_update_user()
 
     user
   end
@@ -47,13 +36,6 @@ defmodule Nautsladder.AccountsFixtures do
 
   def user_scope_fixture(user) do
     Scope.for_user(user)
-  end
-
-  def set_password(user) do
-    {:ok, user, _expired_tokens} =
-      Accounts.update_user_password(user, %{password: valid_user_password()})
-
-    user
   end
 
   def extract_user_token(fun) do
@@ -69,12 +51,6 @@ defmodule Nautsladder.AccountsFixtures do
       ),
       set: [authenticated_at: authenticated_at]
     )
-  end
-
-  def generate_user_magic_link_token(user) do
-    {encoded_token, user_token} = Accounts.UserToken.build_email_token(user, "login")
-    Nautsladder.Repo.insert!(user_token)
-    {encoded_token, user_token.token}
   end
 
   def offset_user_token(token, amount_to_add, unit) do

@@ -1,62 +1,70 @@
 defmodule NautsladderWeb.UserSessionController do
   use NautsladderWeb, :controller
+  require Logger
 
   alias Nautsladder.Accounts
   alias NautsladderWeb.UserAuth
 
-  def create(conn, %{"_action" => "confirmed"} = params) do
-    create(conn, params, "User confirmed successfully.")
+  alias Nautsladder.Accounts
+  alias NautsladderWeb.UserAuth
+
+  defp config() do
+    Application.get_env(:assent, :discord)
+    |> Keyword.put(:redirect_uri, NautsladderWeb.Endpoint.url() <> "/oauth/discord/callback")
   end
 
-  def create(conn, params) do
-    create(conn, params, "Welcome back!")
-  end
+  defp oauth_provider(), do: Application.get_env(:nautsladder, :oauth_provider)
 
-  # magic link login
-  defp create(conn, %{"user" => %{"token" => token} = user_params}, info) do
-    case Accounts.login_user_by_magic_link(token) do
-      {:ok, user, tokens_to_disconnect} ->
-        UserAuth.disconnect_sessions(tokens_to_disconnect)
+  def request(conn, _params) do
+    config()
+    |> oauth_provider().authorize_url()
+    |> case do
+      {:ok, %{url: url, session_params: params}} ->
+        put_session(conn, :session_params, params)
+        |> put_resp_header("location", url)
+        |> send_resp(302, "")
 
-        conn
-        |> put_flash(:info, info)
-        |> UserAuth.log_in_user(user, user_params)
-
-      _ ->
-        conn
-        |> put_flash(:error, "The link is invalid or it has expired.")
-        |> redirect(to: ~p"/users/log-in")
+      {:error, err} ->
+        Logger.error("Failed authentication request #{inspect(err)}")
+        send_resp(conn, 500, "Failed Authentication")
     end
   end
 
-  # email + password login
-  defp create(conn, %{"user" => user_params}, info) do
-    %{"email" => email, "password" => password} = user_params
+  def callback(conn, params) do
+    session_params = get_session(conn, :session_params)
 
-    if user = Accounts.get_user_by_email_and_password(email, password) do
-      conn
-      |> put_flash(:info, info)
-      |> UserAuth.log_in_user(user, user_params)
+    res =
+      config()
+      |> Keyword.put(:session_params, session_params)
+      |> oauth_provider().callback(params)
+
+    with {:ok, %{user: user}} <- res,
+         %{"preferred_username" => username, "picture" => avatar_url, "sub" => discord_id} = user,
+         {:ok, user} <-
+           Accounts.register_update_user(%{
+             discord_id: String.to_integer(discord_id),
+             username: username,
+             avatar_url: avatar_url
+           }) do
+      UserAuth.log_in_user(conn, user)
     else
-      # In order to prevent user enumeration attacks, don't disclose whether the email is registered.
-      conn
-      |> put_flash(:error, "Invalid email or password")
-      |> put_flash(:email, String.slice(email, 0, 160))
-      |> redirect(to: ~p"/users/log-in")
+      {:error, %Ecto.Changeset{} = changeset} ->
+        Logger.error("failed user insert #{inspect(changeset.errors)}")
+
+        conn
+        |> put_flash(
+          :error,
+          "We were unable to fetch the necessary information from your Discord account"
+        )
+        |> redirect(to: "/")
+
+      {:error, reason} ->
+        Logger.error("failed discord exchange #{inspect(reason)}")
+
+        conn
+        |> put_flash(:error, "We were unable to sign you in. Please try again later")
+        |> redirect(to: "/")
     end
-  end
-
-  def update_password(conn, %{"user" => user_params} = params) do
-    user = conn.assigns.current_scope.user
-    true = Accounts.sudo_mode?(user)
-    {:ok, _user, expired_tokens} = Accounts.update_user_password(user, user_params)
-
-    # disconnect all existing LiveViews with old sessions
-    UserAuth.disconnect_sessions(expired_tokens)
-
-    conn
-    |> put_session(:user_return_to, ~p"/users/settings")
-    |> create(params, "Password updated successfully!")
   end
 
   def delete(conn, _params) do
