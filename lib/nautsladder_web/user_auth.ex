@@ -26,18 +26,12 @@ defmodule NautsladderWeb.UserAuth do
   # the reissuing of tokens completely.
   @session_reissue_age_in_days 7
 
-  @doc """
-  Logs the user in.
-
-  Redirects to the session's `:user_return_to` path
-  or falls back to the `signed_in_path/1`.
-  """
   def log_in_user(conn, user, params \\ %{}) do
     user_return_to = get_session(conn, :user_return_to)
 
     conn
     |> create_or_extend_session(user, params)
-    |> redirect(to: user_return_to || signed_in_path(conn))
+    |> redirect(to: user_return_to || ~p"/")
   end
 
   @doc """
@@ -255,14 +249,6 @@ defmodule NautsladderWeb.UserAuth do
       Scope.for_user(user)
     end)
   end
-
-  @doc "Returns the path to redirect to after log in."
-  # the user was already logged in, redirect to settings
-  def signed_in_path(%Plug.Conn{assigns: %{current_scope: %Scope{user: %Accounts.User{}}}}) do
-    ~p"/users/settings"
-  end
-
-  def signed_in_path(_), do: ~p"/"
 
   @doc """
   Plug for routes that require the user to be authenticated.
